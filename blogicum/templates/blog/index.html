@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Главная страница{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <h1>Добро пожаловать в Блогикум!</h1>
+  {% for post in page_obj %}
+    {% include "includes/post_card.html" %}
+  {% empty %}
+    <p>Пока нет постов.</p>
+  {% endfor %}
+  {% include "includes/paginator.html" %}
+</div>
+{% endblock %}

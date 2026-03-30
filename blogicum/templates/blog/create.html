@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load django_bootstrap5 %}
+
+{% block title %}{% if post %}Редактирование поста{% else %}Новый пост{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-header">
+          <h3>{% if post %}Редактирование поста{% else %}Новый пост{% endif %}</h3>
+        </div>
+        <div class="card-body">
+          <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {% bootstrap_form form %}
+            <button type="submit" class="btn btn-primary">Сохранить</button>
+            {% if delete_mode %}
+              <a href="{% url 'blog:post_delete' post.id %}" class="btn btn-danger">Удалить</a>
+            {% endif %}
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

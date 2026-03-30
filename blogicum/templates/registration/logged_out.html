@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Выход{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="alert alert-info">
+    <h4>Вы вышли из системы</h4>
+    <p><a href="{% url 'blog:index' %}">Вернуться на главную</a></p>
+  </div>
+</div>
+{% endblock %}

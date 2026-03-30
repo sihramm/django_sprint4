@@ -1,0 +1,15 @@
+<div class="card mb-3">
+  <div class="card-body">
+    <h5><a href="{% url 'blog:post_detail' post.id %}">{{ post.title }}</a></h5>
+    <p class="text-muted">
+      {{ post.pub_date|date:"d E Y" }}
+      {% if post.location %} | {{ post.location.name }}{% endif %}
+      | Категория: <a href="{% url 'blog:category_posts' post.category.slug %}">{{ post.category.title }}</a>
+    </p>
+    <p>{{ post.text|truncatewords:30 }}</p>
+    {% if post.image %}
+      <img src="{{ post.image.url }}" alt="" style="max-height: 100px;">
+    {% endif %}
+    <p>Комментариев: {{ post.comment_count|default:0 }}</p>
+  </div>
+</div>

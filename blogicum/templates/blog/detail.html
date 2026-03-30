@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% load django_bootstrap5 %}
+
+{% block title %}{{ post.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row">
+    <div class="col-12">
+      <h1>{{ post.title }}</h1>
+      <p class="text-muted">
+        Опубликовано: {{ post.pub_date|date:"d E Y" }} | Автор: <a href="{% url 'blog:profile' post.author.username %}">{{ post.author.username }}</a>
+        {% if post.location %}| Место: {{ post.location.name }}{% endif %}
+        | Категория: <a href="{% url 'blog:category_posts' post.category.slug %}">{{ post.category.title }}</a>
+      </p>
+      {% if post.image %}
+        <img src="{{ post.image.url }}" alt="{{ post.title }}" class="img-fluid mb-3">
+      {% endif %}
+      <p>{{ post.text|linebreaksbr }}</p>
+
+      {% if user == post.author %}
+        <div class="mt-3">
+          <a href="{% url 'blog:post_edit' post.id %}" class="btn btn-sm btn-outline-secondary">Редактировать</a>
+          <a href="{% url 'blog:post_delete' post.id %}" class="btn btn-sm btn-outline-danger">Удалить</a>
+        </div>
+      {% endif %}
+
+      <hr>
+
+      <h3>Комментарии ({{ post.comments.count }})</h3>
+      {% if user.is_authenticated %}
+        <form method="post" action="{% url 'blog:add_comment' post.id %}">
+          {% csrf_token %}
+          {% bootstrap_form form %}
+          <button type="submit" class="btn btn-primary">Отправить</button>
+        </form>
+      {% else %}
+        <p><a href="{% url 'login' %}">Войдите</a>, чтобы оставить комментарий.</p>
+      {% endif %}
+
+      {% for comment in comments %}
+        <div class="card mt-3">
+          <div class="card-body">
+            <strong>{{ comment.author.username }}</strong> <small class="text-muted">{{ comment.created_at|date:"d.m.Y H:i" }}</small>
+            <p>{{ comment.text|linebreaksbr }}</p>
+            {% if user == comment.author %}
+              <a href="{% url 'blog:edit_comment' post.id comment.id %}" class="btn btn-sm btn-outline-secondary">Редактировать</a>
+              <a href="{% url 'blog:delete_comment' post.id comment.id %}" class="btn btn-sm btn-outline-danger">Удалить</a>
+            {% endif %}
+          </div>
+        </div>
+      {% empty %}
+        <p>Пока нет комментариев. Будьте первым!</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
