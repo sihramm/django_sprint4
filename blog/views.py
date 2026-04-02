@@ -5,11 +5,13 @@ from django.core.paginator import Paginator
 from django.db.models import Count
 from django.conf import settings
 from django.utils import timezone
-from .models import Post, Comment
+from .models import Post, Comment, Category, Location
 from .forms import PostForm, CommentForm, ProfileForm
 
+User = get_user_model()
+
 def get_filtered_posts():
-    """Возвращает queryset опубликованных постов с учётом даты публикации."""
+    """Возвращает queryset опубликованных постов с аннотацией количества комментариев."""
     return Post.objects.filter(
         is_published=True,
         category__is_published=True,
@@ -20,46 +22,44 @@ def get_filtered_posts():
         comment_count=Count('comments')
     )
 
-User = get_user_model()
-
+def get_paginated_page(queryset, request):
+    """Возвращает объект пагинации для переданного queryset."""
+    paginator = Paginator(queryset, settings.POSTS_PER_PAGE)
+    page_number = request.GET.get('page')
+    return paginator.get_page(page_number)
 
 def index(request):
     post_list = get_filtered_posts().order_by('-pub_date')
-    paginator = Paginator(post_list, settings.POSTS_PER_PAGE)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    page_obj = get_paginated_page(post_list, request)
     return render(request, 'blog/index.html', {'page_obj': page_obj})
-
 
 def category_posts(request, category_slug):
     category = get_object_or_404(Category, slug=category_slug, is_published=True)
     post_list = get_filtered_posts().filter(category=category).order_by('-pub_date')
-    paginator = Paginator(post_list, settings.POSTS_PER_PAGE)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    page_obj = get_paginated_page(post_list, request)
     return render(request, 'blog/category.html', {
         'page_obj': page_obj,
         'category': category
     })
 
-
 def profile(request, username):
     author = get_object_or_404(User, username=username)
-    post_list = Post.objects.filter(
-        author=author
-    ).select_related(
-        'category', 'location'
-    ).annotate(
-        comment_count=Count('comments')
-    ).order_by('-pub_date')
-    paginator = Paginator(post_list, settings.POSTS_PER_PAGE)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    # Базовый queryset для постов автора
+    if request.user == author:
+        # Автор видит все свои посты (включая отложенные и снятые с публикации)
+        post_list = Post.objects.filter(author=author).select_related(
+            'category', 'location'
+        ).annotate(
+            comment_count=Count('comments')
+        ).order_by('-pub_date')
+    else:
+        # Чужие пользователи видят только опубликованные посты
+        post_list = get_filtered_posts().filter(author=author).order_by('-pub_date')
+    page_obj = get_paginated_page(post_list, request)
     return render(request, 'blog/profile.html', {
         'page_obj': page_obj,
         'author': author,
     })
-
 
 def post_detail(request, post_id):
     post = get_object_or_404(Post, id=post_id)
@@ -75,7 +75,6 @@ def post_detail(request, post_id):
         'form': form,
     })
 
-
 @login_required
 def post_create(request):
     form = PostForm(request.POST or None, request.FILES or None)
@@ -85,7 +84,6 @@ def post_create(request):
         post.save()
         return redirect('blog:profile', username=request.user.username)
     return render(request, 'blog/create.html', {'form': form})
-
 
 @login_required
 def post_edit(request, post_id):
@@ -98,7 +96,6 @@ def post_edit(request, post_id):
         return redirect('blog:post_detail', post_id=post_id)
     return render(request, 'blog/create.html', {'form': form, 'post': post})
 
-
 @login_required
 def post_delete(request, post_id):
     post = get_object_or_404(Post, id=post_id)
@@ -108,7 +105,6 @@ def post_delete(request, post_id):
         post.delete()
         return redirect('blog:profile', username=request.user.username)
     return render(request, 'blog/create.html', {'post': post, 'delete_mode': True})
-
 
 @login_required
 def add_comment(request, post_id):
@@ -121,7 +117,6 @@ def add_comment(request, post_id):
         comment.save()
     return redirect('blog:post_detail', post_id=post_id)
 
-
 @login_required
 def edit_comment(request, post_id, comment_id):
     comment = get_object_or_404(Comment, id=comment_id, post_id=post_id)
@@ -133,7 +128,6 @@ def edit_comment(request, post_id, comment_id):
         return redirect('blog:post_detail', post_id=post_id)
     return render(request, 'blog/comment.html', {'form': form, 'comment': comment})
 
-
 @login_required
 def delete_comment(request, post_id, comment_id):
     comment = get_object_or_404(Comment, id=comment_id, post_id=post_id)
@@ -143,7 +137,6 @@ def delete_comment(request, post_id, comment_id):
         comment.delete()
         return redirect('blog:post_detail', post_id=post_id)
     return render(request, 'blog/comment.html', {'comment': comment, 'delete_mode': True})
-
 
 @login_required
 def edit_profile(request):
